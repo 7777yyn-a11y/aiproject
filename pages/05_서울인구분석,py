@@ -1,1 +1,97 @@
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import os
 
+# 페이지 기본 설정
+st.set_page_config(page_title="행정구역별 인구 현황 시각화", layout="wide")
+
+st.title("📊 행정구역/연도/성별 연령대별 인구 분석")
+
+# 데이터 로드 (pages 폴더의 상위 폴더에 있는 파일 경로 지정: '../population (1).csv')
+@st.cache_data
+def load_data():
+    # 현재 파일 위치 기준 상위 폴더의 파일 경로
+    file_path = os.path.join("..", "population (1).csv")
+    try:
+        df = pd.read_csv(file_path, encoding="cp949")
+    except UnicodeDecodeError:
+        df = pd.read_csv(file_path, encoding="euc-kr")
+    return df
+
+try:
+    df = load_data()
+
+    # 사이드바 선택 메뉴
+    st.sidebar.header("🔍 조건 선택")
+
+    # 1. 행정구역 선택
+    region_list = df['행정구역'].tolist()
+    selected_region = st.sidebar.selectbox("행정구역 선택", region_list)
+
+    # 2. 연도 선택
+    years = ['2020', '2021', '2022', '2023', '2024', '2025']
+    selected_year = st.sidebar.selectbox("연도 선택", years)
+
+    # 3. 성별 선택
+    gender_options = {"전체": "거주자", "남성": "남_거주자", "여성": "여_거주자"}
+    selected_gender_label = st.sidebar.radio("성별 선택", list(gender_options.keys()))
+    gender_key = gender_options[selected_gender_label]
+
+    # 연령 구간 칼럼 정의
+    age_groups = [
+        "0~9세", "10~19세", "20~29세", "30~39세", "40~49세",
+        "50~59세", "60~69세", "70~79세", "80~89세", "90~99세", "100세 이상"
+    ]
+
+    # 선택된 행정구역 데이터 추출
+    row_data = df[df['행정구역'] == selected_region].iloc[0]
+
+    # 연령별 인구수 수집
+    population_values = []
+    for age in age_groups:
+        col_name = f"{selected_year}년_{gender_key}_{age}"
+        val_str = str(row_data[col_name]).replace(',', '')
+        population_values.append(int(val_str))
+
+    # Plotly 꺾은선 그래프 작성
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=age_groups,
+        y=population_values,
+        mode='lines+markers+text',
+        name='인구수',
+        line=dict(color='green', width=3),               # 초록색 선
+        marker=dict(size=8, color='green'),               # 초록색 마커
+        text=[f"{v:,}" for v in population_values],      # 데이터 라벨 표시
+        textposition="top center"
+    ))
+
+    # 세로축 1,000명 단위 주 눈금선 설정 및 스타일 지정
+    fig.update_layout(
+        title=f"<b>{selected_region} ({selected_year}년, {selected_gender_label}) 연령대별 인구수</b>",
+        xaxis_title="나이 (연령대)",
+        yaxis_title="인구수 (명)",
+        xaxis=dict(showgrid=True),
+        yaxis=dict(
+            dtick=1000,           # 세로축 구분선 간격을 1,000명 단위로 지정
+            showgrid=True,
+            gridcolor='lightgrey'
+        ),
+        template="plotly_white",
+        height=600
+    )
+
+    # 그래프 출력
+    st.plotly_chart(fig, use_container_width=True)
+
+    # 요약 정보 표시
+    st.subheader("📋 선택 데이터 요약")
+    col1, col2 = st.columns(2)
+    tot_col = f"{selected_year}년_{gender_key}_총인구수"
+    total_pop = int(str(row_data[tot_col]).replace(',', ''))
+    col1.metric("선택 조건 총인구수", f"{total_pop:,} 명")
+
+except FileNotFoundError:
+    st.error("상위 폴더에서 `population (1).csv` 파일을 찾을 수 없습니다. 파일 위치를 확인해주세요.")
