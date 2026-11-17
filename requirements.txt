@@ -3,3 +3,6 @@ folium
 streamlit-folium
 pandas
 matplotlib>=3.7.0
+numpy
+scikit-learn
+koreanize-matplotlib
