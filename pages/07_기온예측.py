@@ -2,8 +2,29 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import koreanize_matplotlib  # Streamlit Cloud 환경 한글 폰트 자동 설정
+import matplotlib.font_manager as fm
+import platform
 from sklearn.linear_model import LinearRegression
+
+# --- 운영체제별 한글 폰트 설정 ---
+def set_font():
+    os_name = platform.system()
+    if os_name == "Windows":
+        plt.rc("font", family="Malgun Gothic")
+    elif os_name == "Darwin":  # macOS
+        plt.rc("font", family="AppleGothic")
+    else:  # Linux (Streamlit Cloud 환경 등)
+        # 나눔고딕 등 리눅스 환경에 설치될 수 있는 폰트 확인
+        font_list = [f.name for f in fm.fontManager.ttflist]
+        if "NanumGothic" in font_list:
+            plt.rc("font", family="NanumGothic")
+        elif "DejaVu Sans" in font_list:
+            # 폰트가 없을 경우 기본 폰트로 설정하되 마이너스 기호 깨짐 방지
+            pass
+    # 마이너스 기호 깨짐 현상 방지
+    plt.rcParams["axes.unicode_minus"] = False
+
+set_font()
 
 # 페이지 기본 설정
 st.set_page_config(page_title="월별 평균기온 예측기", page_icon="🌡️", layout="wide")
