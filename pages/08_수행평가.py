@@ -1,155 +1,207 @@
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
-import pandas as pd
 
-# Page config
+# 페이지 기본 설정
 st.set_page_config(
-    page_title="외국인 선호 서울 주요 관광지 TOP 10",
+    page_title="Top 10 Daejeon Attractions for Foreigners",
     page_icon="🗺️",
     layout="wide"
 )
 
-st.title("🗺️ 외국인이 좋아하는 서울 주요 관광지 TOP 10")
-st.write("서울 지도 위 마커를 클릭하거나, 아래 설명 카드 및 데이터표를 통해 각 관광지의 특징을 확인해보세요!")
-
-# Data definition
-locations = [
+# 외국인 선호 대전 주요 관광지 Top 10 데이터 (한국관광공사 및 대전관광 데이터 기반)
+ATTRACTIONS = [
     {
         "rank": 1,
-        "name": "경복궁",
-        "category": "역사 / 문화",
-        "lat": 37.5796,
-        "lon": 126.9770,
-        "desc": "조선시대 대표 궁궐로 한복 체험과 왕궁 수문장 교대식이 외국인에게 매우 인기 있습니다."
+        "name_ko": "성심당 본점",
+        "name_en": "Sungsimdang Main Store",
+        "category": "미식 (Food)",
+        "lat": 36.3276,
+        "lon": 127.4273,
+        "desc_en": "Daejeon's iconic bakery founded in 1956, famous for Fried Soboro bread.",
+        "desc_ko": "1956년 개업한 대전의 대표 향토 제과점. 튀김소보로와 부추빵으로 유명한 미식 성지."
     },
     {
         "rank": 2,
-        "name": "N서울타워 (남산타워)",
-        "category": "랜드마크 / 야경",
-        "lat": 37.5512,
-        "lon": 126.9882,
-        "desc": "서울 도심 전경을 한눈에 감상할 수 있는 대표 야경 스팟 및 사랑의 자물쇠 명소입니다."
+        "name_ko": "한밭수목원",
+        "name_en": "Hanbat Arboretum",
+        "category": "자연/힐링 (Nature)",
+        "lat": 36.3698,
+        "lon": 127.3882,
+        "desc_en": "The largest man-made urban arboretum in Korea, ideal for a relaxing stroll.",
+        "desc_ko": "전국 최대 규모의 도심 속 인공수목원. 열대식물원과 산책로가 잘 조성되어 있음."
     },
     {
         "rank": 3,
-        "name": "명동 쇼핑거리",
-        "category": "쇼핑 / 길거리 음식",
-        "lat": 37.5636,
-        "lon": 126.9822,
-        "desc": "K-뷰티 쇼핑과 풍부한 K-길거리 음식을 즐길 수 있는 필수 방문지입니다."
+        "name_ko": "장태산자연휴양림",
+        "name_en": "Jangtaesan Natural Recreation Forest",
+        "category": "자연/힐링 (Nature)",
+        "lat": 36.2160,
+        "lon": 127.3413,
+        "desc_en": "Exotic dense Metasequoia forest featuring a thrilling skyway bridge.",
+        "desc_ko": "국내 유일의 메타세쿼이아 숲이 울창하게 형성된 휴양림으로 스카이웨이 전망대가 인기."
     },
     {
         "rank": 4,
-        "name": "북촌한옥마을",
-        "category": "전통 / 거리",
-        "lat": 37.5826,
-        "lon": 126.9831,
-        "desc": "실제 한옥들이 보존된 고즈넉한 마을로 전통적인 풍경을 사진에 담기 좋습니다."
+        "name_ko": "유성온천 족욕체험장",
+        "name_en": "Yuseong Hot Springs Foot Bath",
+        "category": "체험/휴양 (Experience)",
+        "lat": 36.3551,
+        "lon": 127.3446,
+        "desc_en": "Free outdoor natural hot spring foot spa open year-round in the city.",
+        "desc_ko": "100% 천연 온천수를 연중무휴 무료로 즐길 수 있는 도심 속 노천 족욕 명소."
     },
     {
         "rank": 5,
-        "name": "홍대 거리",
-        "category": "청춘 / 문화 / 야간",
-        "lat": 37.5563,
-        "lon": 126.9226,
-        "desc": "버스킹, 독특한 카페, 활기찬 야간 문화와 인디 예술을 경험할 수 있는 곳입니다."
+        "name_ko": "엑스포과학공원 (한빛탑)",
+        "name_en": "Expo Science Park (Hanbit Tower)",
+        "category": "과학/야경 (Landmark)",
+        "lat": 36.3766,
+        "lon": 127.3872,
+        "desc_en": "Symbol of Daejeon's science identity with musical fountains and night views.",
+        "desc_ko": "93 대전엑스포의 상징. 한빛탑 전망대와 물빛광장 음악분수 야경이 돋보이는 곳."
     },
     {
         "rank": 6,
-        "name": "동대문디자인플라자 (DDP)",
-        "category": "건축 / 쇼핑",
-        "lat": 37.5665,
-        "lon": 127.0090,
-        "desc": "독특한 곡선 건축미와 패션 행사, 야경이 인상적인 현대 디자인 랜드마크입니다."
+        "name_ko": "계족산 황톳길",
+        "name_en": "Gyejoksan Red Clay Trail",
+        "category": "체험/휴양 (Experience)",
+        "lat": 36.4041,
+        "lon": 127.4298,
+        "desc_en": "14.5km barefoot forest walking trail covered in soft red clay.",
+        "desc_ko": "14.5km 숲속 임도에 황토를 깔아 맨발 걷기와 산림욕을 동시에 즐기는 힐링 코스."
     },
     {
         "rank": 7,
-        "name": "롯데월드타워 & 서울스카이",
-        "category": "전망대 / 쇼핑",
-        "lat": 37.5126,
-        "lon": 127.1025,
-        "desc": "세계 6위 높이의 마천루로 파노라마 한강 뷰를 자랑하는 대표 현대적 명소입니다."
+        "name_ko": "대청호 오백리길 (4구간)",
+        "name_en": "Daecheongho Lake 500-ri Trail",
+        "category": "자연/힐링 (Nature)",
+        "lat": 36.4098,
+        "lon": 127.4986,
+        "desc_en": "Scenic lakeside walking course famous for reed fields and filming locations.",
+        "desc_ko": "호수와 산이 어우러진 수변 산책길. 갈대밭과 드라마 촬영지로 외국인에게 인기가 높음."
     },
     {
         "rank": 8,
-        "name": "인사동",
-        "category": "전통 공예 / 찻집",
-        "lat": 37.5743,
-        "lon": 126.9897,
-        "desc": "한국 전통 공예품, 갤러리, 전통 찻집 및 쌈지길이 위치한 문화 거리입니다."
+        "name_ko": "우암사적공원",
+        "name_en": "Uam Historic Park",
+        "category": "역사/전통 (History)",
+        "lat": 36.3364,
+        "lon": 127.4564,
+        "desc_en": "Traditional Joseon-era Confucian academy architecture and serene pond.",
+        "desc_ko": "조선 후기 대학자 송시열 선생이 학문을 닦던 곳으로 고즈넉한 한옥과 연못 풍경이 일품."
     },
     {
         "rank": 9,
-        "name": "이태원",
-        "category": "다문화 / 미식",
-        "lat": 37.5345,
-        "lon": 126.9942,
-        "desc": "전 세계의 음식과 다채로운 국제적 분위기를 지닌 다문화 거리입니다."
+        "name_ko": "대동하늘공원",
+        "name_en": "Daedong Sky Park",
+        "category": "과학/야경 (Landmark)",
+        "lat": 36.3292,
+        "lon": 127.4485,
+        "desc_en": "Hilltop mural village offering panoramic sunset and city night views.",
+        "desc_ko": "벽화마을 언덕 정상의 풍차 전망대에서 대전 도심의 일몰과 야경을 한눈에 담는 명소."
     },
     {
         "rank": 10,
-        "name": "반포 한강공원",
-        "category": "휴식 / 야경",
-        "lat": 37.5102,
-        "lon": 126.9960,
-        "desc": "달빛무지개분수와 함께 한강 라면, 피크닉을 체험하는 로컬 휴식처입니다."
+        "name_ko": "으능정이 문화의거리",
+        "name_en": "Euneungjeongi Culture Street",
+        "category": "미식 (Food)",
+        "lat": 36.3284,
+        "lon": 127.4278,
+        "desc_en": "Vibrant youth street featuring the giant LED Skyroad and local eateries.",
+        "desc_ko": "대형 LED 아케이드 스카이로드와 다양한 먹거리, 쇼핑이 어우러진 대전 원도심 중심가."
     }
 ]
 
-df = pd.DataFrame(locations)
+# 카테고리별 마커 색상 지정
+CATEGORY_COLORS = {
+    "미식 (Food)": "red",
+    "자연/힐링 (Nature)": "green",
+    "체험/휴양 (Experience)": "orange",
+    "과학/야경 (Landmark)": "purple",
+    "역사/전통 (History)": "blue"
+}
 
-# 1. Map Display Section
-st.subheader("📍 서울 관광지 지도 (TOP 10)")
+# 타이틀 영역
+st.title("🇰🇷 외국인이 사랑하는 대전 주요 관광지 Top 10")
+st.markdown("Top 10 Must-Visit Tourist Attractions in **Daejeon** for International Visitors")
 
-# Initialize Folium Map centered on Seoul
-m = folium.Map(location=[37.555, 126.985], zoom_start=12, tiles="OpenStreetMap")
+# 사이드바 필터 및 선택 컨트롤
+with st.sidebar:
+    st.header("🔍 탐색 필터 (Filter)")
+    
+    all_categories = list(CATEGORY_COLORS.keys())
+    selected_categories = st.multiselect(
+        "테마별 보기 (Category)",
+        options=all_categories,
+        default=all_categories
+    )
+    
+    filtered_places = [p for p in ATTRACTIONS if p["category"] in selected_categories]
+    
+    st.divider()
+    st.subheader("📍 명소 바로가기 (Quick Focus)")
+    place_options = ["전체 보기 (All Top 10)"] + [
+        f"#{p['rank']} {p['name_ko']} ({p['name_en']})" for p in filtered_places
+    ]
+    selected_place_label = st.selectbox("지도 중심 이동:", place_options)
 
-# Add markers for each location
-for idx, row in df.iterrows():
+# 지도 중심 좌표 및 줌 레벨 결정
+if selected_place_label == "전체 보기 (All Top 10)" or not filtered_places:
+    center_lat, center_lon = 36.3504, 127.3845  # 대전 시청 기준 중심 좌표
+    zoom_level = 11
+    focused_rank = None
+else:
+    focused_rank = int(selected_place_label.split()[0].replace("#", ""))
+    target = next(p for p in filtered_places if p["rank"] == focused_rank)
+    center_lat, center_lon = target["lat"], target["lon"]
+    zoom_level = 15
+
+# Folium 지도 생성
+m = folium.Map(
+    location=[center_lat, center_lon],
+    zoom_start=zoom_level,
+    tiles="CartoDB positron"
+)
+
+# 마커 추가
+for place in filtered_places:
+    color = CATEGORY_COLORS.get(place["category"], "blue")
+    
     popup_html = f"""
-    <div style='width: 220px; font-family: sans-serif;'>
-        <h4 style='margin-bottom: 5px;'><b>{row['rank']}. {row['name']}</b></h4>
-        <p style='margin: 3px 0;'><b>카테고리:</b> {row['category']}</p>
-        <p style='font-size: 13px; color: #555;'>{row['desc']}</p>
+    <div style="width: 240px; font-family: sans-serif; line-height: 1.4;">
+        <span style="background-color: #f0f2f6; padding: 2px 6px; border-radius: 4px; font-size: 11px;">
+            {place['category']}
+        </span>
+        <h4 style="margin: 6px 0 2px 0;">#{place['rank']} {place['name_ko']}</h4>
+        <div style="color: #555; font-size: 12px; font-weight: bold; margin-bottom: 6px;">
+            {place['name_en']}
+        </div>
+        <p style="font-size: 12px; margin: 0 0 6px 0; color: #222;">{place['desc_en']}</p>
+        <p style="font-size: 11px; margin: 0; color: #666;">{place['desc_ko']}</p>
     </div>
     """
     
     folium.Marker(
-        location=[row['lat'], row['lon']],
+        location=[place["lat"], place["lon"]],
         popup=folium.Popup(popup_html, max_width=260),
-        tooltip=f"{row['rank']}위: {row['name']}",
-        icon=folium.Icon(color="red", icon="star", prefix="fa")
+        tooltip=f"#{place['rank']} {place['name_ko']} ({place['name_en']})",
+        icon=folium.Icon(color=color, icon="info-sign")
     ).add_to(m)
 
-# Render Folium map in Streamlit
-st_folium(m, width="100%", height=500)
+# 레이아웃 분할 (좌측 지도 / 우측 리스트)
+col1, col2 = st.columns([2.2, 1])
 
-st.markdown("---")
+with col1:
+    st_folium(m, width="100%", height=620, returned_objects=[])
 
-# 2. Information Section below the Map
-st.subheader("ℹ️ TOP 10 관광지 상세 설명")
-
-# Grid layout for cards below map
-cols = st.columns(2)
-for idx, row in df.iterrows():
-    col = cols[idx % 2]
-    with col:
-        with st.expander(f"**{row['rank']}위. {row['name']}** ({row['category']})", expanded=True):
-            st.write(row['desc'])
-
-st.markdown("---")
-
-# Summary Table
-st.subheader("📊 한눈에 보는 데이터")
-st.dataframe(
-    df[['rank', 'name', 'category', 'desc']],
-    column_config={
-        "rank": "순위",
-        "name": "관광지명",
-        "category": "카테고리",
-        "desc": "주요 특징 및 설명"
-    },
-    hide_index=True,
-    use_container_width=True
-)
+with col2:
+    st.subheader("📋 선정 명소 리스트")
+    if not filtered_places:
+        st.warning("선택된 카테고리가 없습니다. 사이드바에서 테마를 선택해주세요.")
+    else:
+        for p in filtered_places:
+            with st.expander(f"#{p['rank']} {p['name_ko']} | {p['name_en']}", expanded=(p["rank"] == focused_rank)):
+                st.caption(f"카테고리: {p['category']}")
+                st.write(f"**EN:** {p['desc_en']}")
+                st.write(f"**KO:** {p['desc_ko']}")
